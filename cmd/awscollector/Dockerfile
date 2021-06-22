@@ -2,7 +2,7 @@
 #	Building Stage         #	
 #			       #	
 ################################
-FROM alpine:latest as build 
+FROM alpine:latest as build
 
 # update cert
 RUN apk --update add ca-certificates
@@ -13,6 +13,11 @@ RUN apk add --update bash git make build-base
 # config go
 COPY --from=golang:1.16.3-alpine /usr/local/go/ /usr/local/go/
 ENV PATH="/usr/local/go/bin:${PATH}"
+
+#set up platform
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+RUN echo "I'm building for $TARGETPLATFORM and build platform $BUILDPLATFORM"
 
 # download go modules ahead to speed up the building
 WORKDIR /workspace
@@ -31,7 +36,7 @@ COPY Makefile /workspace/Makefile
 COPY config /workspace/config
 
 # build binary
-RUN make amd64-build
+RUN if [[ $TARGETPLATFORM = "linux/amd64" ]] ; then make amd64-bin-for-docker ; else make arm64-bin-for-docker ; fi
 
 ################################
 #	Final Stage            #	
@@ -40,7 +45,7 @@ RUN make amd64-build
 FROM scratch
 
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=build /workspace/build/linux/aoc_linux_x86_64 /awscollector
+COPY --from=build /workspace/build/linux/aoc_docker /awscollector
 COPY --from=build /workspace/config.yaml /etc/otel-config.yaml
 COPY --from=build /workspace/config/eks/prometheus/config-appmesh.yaml /etc/eks/prometheus/config-appmesh.yaml
 COPY --from=build /workspace/config/eks/prometheus/config-haproxy.yaml /etc/eks/prometheus/config-haproxy.yaml

@@ -69,6 +69,30 @@ amd64-build: install-tools lint
 amd64-build-only:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o ./build/linux/aoc_linux_x86_64 ./cmd/awscollector
 
+.PHONY: amd64-bin-for-docker
+amd64-bin-for-docker: install-tools lint
+	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o ./build/linux/aoc_docker ./cmd/awscollector
+
+# Install tools is not working for arm64 docker build
+# /usr/local/go/pkg/tool/linux_arm64/link: running gcc failed: exit status 1
+# collect2: fatal error: cannot find 'ld'
+#compilation terminated.
+#make: *** [Makefile:156: install-tools] Error 2
+#------
+#Dockerfile:40
+#--------------------
+#  38 |
+#  39 |     # build binary
+#  40 | >>> RUN if [[ $TARGETPLATFORM = "linux/amd64" ]] ; then make amd64-bin-for-docker ; else make arm64-bin-for-docker ; fi
+#  41 |
+#  42 |     ################################
+#--------------------
+#error: failed to solve: rpc error: code = Unknown desc = executor failed running [/bin/sh -c if [[ $TARGETPLATFORM = "linux/amd64" ]] ; then make amd64-bin-for-docker ; else make arm64-bin-for-docker ; fi]: exit code: 2
+#make: *** [docker-build-arm64] Error 1
+.PHONY: arm64-bin-for-docker
+arm64-bin-for-docker:
+	GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o ./build/linux/aoc_docker ./cmd/awscollector
+
 .PHONY: awscollector
 awscollector:
 	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o ./bin/awscollector_$(GOOS)_$(GOARCH) ./cmd/awscollector
@@ -83,13 +107,28 @@ package-deb: build
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 DEST=build/packages/debian/amd64 tools/packaging/debian/create_deb.sh
 	ARCH=arm64 TARGET_SUPPORTED_ARCH=aarch64 DEST=build/packages/debian/arm64 tools/packaging/debian/create_deb.sh
 
+#load will not manifest with multi platform only push will manifest refer to https://github.com/docker/buildx/issues/59
 .PHONY: docker-build
-docker-build: 
-	docker build -t $(DOCKER_NAMESPACE)/$(COMPONENT):$(VERSION) -f ./cmd/$(COMPONENT)/Dockerfile .
+docker-build:
+	docker buildx create --use --name mybuildx
+	docker buildx build -t $(DOCKER_NAMESPACE)/$(COMPONENT):$(VERSION) -f ./cmd/$(COMPONENT)/Dockerfile --platform=linux/amd64 --load .
+	docker buildx rm mybuildx
+
+.PHONY: docker-build-arm64
+docker-build-arm64:
+	docker buildx create --use --name mybuildx
+	docker buildx build -t $(DOCKER_NAMESPACE)/$(COMPONENT):$(VERSION)-arm64 -f ./cmd/$(COMPONENT)/Dockerfile --platform=linux/arm64 --load .
+	docker buildx rm mybuildx
 
 .PHONY: docker-push
 docker-push:
 	docker push $(DOCKER_NAMESPACE)/$(COMPONENT):$(VERSION)
+
+.PHONY: docker-push-multi-arc
+docker-push-multi-arc:
+	docker buildx create --use --name mybuildx
+	docker buildx build -t $(DOCKER_NAMESPACE)/$(COMPONENT):$(VERSION) -f ./cmd/$(COMPONENT)/Dockerfile --platform=linux/amd64,linux/arm64 --push .
+	docker buildx rm mybuildx
 
 .PHONY: docker-run
 docker-run:
