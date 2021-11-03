@@ -37,7 +37,7 @@ func main() {
 	ssmClient := ssm.New(testSession)
 
 	//get list of documents with versions
-	documentName := "testAWSDistroOTel-Collector"
+	documentName := "testAWSDistroOTel-Collector-github-testing"
 	listDocumentVersionInput := ssm.ListDocumentVersionsInput{Name: &documentName}
 	listDocumentVersionsOutput, err := ssmClient.ListDocumentVersions(&listDocumentVersionInput)
 	if err != nil {
