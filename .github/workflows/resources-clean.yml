@@ -13,9 +13,9 @@
 
 name: Resources Cleaner
 
-on:
-  schedule:
-    - cron: "0 */1 * * *"
+on: push
+#  schedule:
+#    - cron: "0 */1 * * *"
 
 jobs:
   clean-soaking-resources:
