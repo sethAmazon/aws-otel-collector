@@ -1,0 +1,253 @@
+name: test-public-ecr-upload
+on: push
+
+env:
+  IMAGE_NAME: aws-otel-collector
+  PACKAGING_ROOT: build/packages
+  ECR_REPO: aws/aws-otel-collector
+  PUBLIC_ECR_REPO: aws-otel-test/dev
+  TF_VAR_aws_access_key_id: ${{ secrets.INTEG_TEST_AWS_KEY_ID }}
+  TF_VAR_aws_secret_access_key: ${{ secrets.INTEG_TEST_AWS_KEY_SECRET }}
+  TF_VAR_aoc_vpc_name: aoc-vpc-large
+  TF_VAR_aoc_vpc_security_group: aoc-vpc-security-group-large
+  # TF_VAR_patch: 'true'
+  PKG_SIGN_PRIVATE_KEY_NAME: aoc-linux-pkg-signing-gpg-key
+  WIN_UNSIGNED_PKG_BUCKET: aoc-aws-signer-unsigned-artifact-src
+  WIN_SIGNED_PKG_BUCKET: aoc-aws-signer-signed-artifact-dest
+  WIN_UNSIGNED_PKG_FOLDER: OTelCollectorAuthenticode/AuthenticodeSigner-SHA256-RSA
+  WIN_SIGNED_PKG_FOLDER: OTelCollectorAuthenticode/AuthenticodeSigner-SHA256-RSA
+
+concurrency:
+  group: ci
+  cancel-in-progress: true
+
+jobs:
+  build-aotutil:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out testing framework
+        uses: actions/checkout@v2
+        with:
+          repository: 'aws-observability/aws-otel-test-framework'
+          path: testing-framework
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Install Go tools
+        run: cd /tmp && go get -u golang.org/x/tools/cmd/goimports
+      - name: Build aotutil
+        run: cd testing-framework/cmd/aotutil && make build
+      - name: Cache aotutil
+        uses: actions/cache@v2
+        with:
+          key: "aotutil_${{ github.run_id }}"
+          path: testing-framework/cmd/aotutil/aotutil
+
+  build:
+    needs:
+      - build-aotutil
+    runs-on: ubuntu-latest
+
+    steps:
+      # Set up building environment, patch the dev repo code on dispatch events.
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - uses: actions/checkout@v2
+
+      - name: Checkout dev opentelemetry-collector-contrib
+        if: github.event_name == 'repository_dispatch' && github.event.action == 'dependency-build'
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository_owner }}/opentelemetry-collector-contrib
+          ref: main
+          path: pkg/opentelemetry-collector-contrib
+
+      - name: Checkout dev opentelemetry-collector
+        if: github.event_name == 'repository_dispatch' && github.event.action == 'dependency-build'
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository_owner }}/opentelemetry-collector
+          ref: main
+          path: pkg/opentelemetry-collector
+
+      - name: append replace statement to go.mod to build with dev repo
+        if: github.event_name == 'repository_dispatch' && github.event.action == 'dependency-build'
+        run: |
+          echo "replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => ./pkg/opentelemetry-collector-contrib/exporter/awsxrayexporter" >> go.mod
+          echo "replace go.opentelemetry.io/collector => ./pkg/opentelemetry-collector" >> go.mod
+          cat go.mod
+          ls pkg
+
+      #Cache go build and dependencies before making unit testing and build
+      #Samples codes for different OS: https://github.com/actions/cache/blob/main/examples.md#go---modules
+      #Since we are using Linux, the go packages are in /go/pkg/mod and build are in /.cache/go-build
+      #Also speed up unit testing since go test uses the go build cache and also speed up the go build.
+      - name: Cache go
+        id: cached_go
+        uses: actions/cache@v2
+        env:
+          cache-name: cached_go_modules
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Cache binaries
+        id: cached_binaries
+        uses: actions/cache@v2
+        with:
+          key: "cached_binaries_${{ github.run_id }}"
+          path: build
+
+      # Build and archive binaries into cache.
+      - name: Build Binaries
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: make build
+
+      # upload the binaries to artifact as well because cache@v2 hasn't support windows
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: binary_artifacts
+          path: build
+
+  packaging-image:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Build and archive image into cache
+      - uses: actions/checkout@v2
+
+      - name: Cache Image
+        id: cached_image
+        uses: actions/cache@v2
+        with:
+          key: "cached_image_${{ github.run_id }}"
+          path: "${{ env.PACKAGING_ROOT }}"
+
+      - name: restore cached binaries
+        if: steps.cached_image.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          key: "cached_binaries_${{ github.run_id }}"
+          path: build
+
+      - name: Build Image
+        if: steps.cached_image.outputs.cache-hit != 'true'
+        run: docker build -t $IMAGE_NAME -f cmd/awscollector/Dockerfile .
+
+      - name: Extract the Image file
+        if: steps.cached_image.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p $PACKAGING_ROOT
+          docker save --output $PACKAGING_ROOT/$IMAGE_NAME.tar $IMAGE_NAME
+
+  e2etest-preparation:
+    runs-on: ubuntu-latest
+    needs: [packaging-image]
+    outputs:
+      version: ${{ steps.versioning.outputs.version }}
+    steps:
+      # Archive all the packages into one, and build a unique version number for e2etesting
+      - uses: actions/checkout@v2
+
+      - name: Cache the packages
+        id: cached_packages
+        uses: actions/cache@v2
+        with:
+          key: "cached_packages_${{ github.run_id }}"
+          path: build/packages
+
+      - name: Restore cached rpms
+        if: steps.cached_packages.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          key: "cached_rpms_${{ github.run_id }}"
+          path: build/packages
+
+      - name: Restore cached debs
+        if: steps.cached_packages.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          key: "cached_debs_${{ github.run_id }}"
+          path: build/packages
+
+      - name: Restore cached image
+        if: steps.cached_packages.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          key: "cached_image_${{ github.run_id }}"
+          path: build/packages
+
+      - name: Download built artifacts
+        if: steps.cached_packages.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v2
+        with:
+          name: msi_artifacts
+          path: build/packages
+
+      - name: Restore cached ssm
+        if: steps.cached_packages.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          key: "cached_ssm_${{ github.run_id }}"
+          path: build/packages/ssm
+
+      - run: ls -R
+
+      - name: Versioning for testing
+        id: versioning
+        run: |
+          # build a version with github run id so that we can distingush each build for integ-test
+          Version="`cat VERSION`-$GITHUB_RUN_ID"
+          echo $Version > build/packages/VERSION
+          cat build/packages/VERSION
+          echo "::set-output name=version::$Version"
+
+      - name: prepare CI&CD stack
+        run: |
+          cp .aoc-stack-test.yml build/packages/
+          cp .aoc-stack-release.yml build/packages/
+
+  e2etest-public-ecr-release:
+    runs-on: ubuntu-latest
+    needs: [e2etest-preparation]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache if success
+        id:  e2etest-public-ecr-release
+        uses: actions/cache@v2
+        with:
+          path: |
+            VERSION
+          key: e2etest-public-ecr-release-${{ github.run_id }}
+
+      - name: Login to Public ECR
+        uses: docker/login-action@v1
+        with:
+          registry: public.ecr.aws
+          username: ${{ secrets.INTEG_TEST_AWS_KEY_ID }}
+          password: ${{ secrets.INTEG_TEST_AWS_KEY_SECRET }}
+
+      - name: restore cached images
+        if: steps.e2etest-public-ecr-release.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          path: build/packages
+          key: "cached_packages_${{ github.run_id }}"
+
+      - name: upload to public ECR
+        if: steps.e2etest-public-ecr-release.outputs.cache-hit != 'true'
+        run: |
+          docker load < build/packages/$IMAGE_NAME.tar
+          docker tag $IMAGE_NAME public.ecr.aws/$PUBLIC_ECR_REPO:latest
+          docker push public.ecr.aws/$PUBLIC_ECR_REPO:latest
+          docker tag $IMAGE_NAME public.ecr.aws/$PUBLIC_ECR_REPO:${{ needs.e2etest-preparation.outputs.version }}
+          docker push public.ecr.aws/$PUBLIC_ECR_REPO:${{ needs.e2etest-preparation.outputs.version }}
