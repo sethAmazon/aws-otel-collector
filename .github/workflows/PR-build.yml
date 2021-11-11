@@ -13,11 +13,11 @@
 
 name: PR Build
 
-on:
-  pull_request:
-    branches:
-      - main
-      - dev
+on: push
+#  pull_request:
+#    branches:
+#      - main
+#      - dev
 
 env:
   IMAGE_NAME: aws-otel-collector
@@ -212,7 +212,7 @@ jobs:
           echo ${{ steps.set-matrix.outputs.matrix }}
           
   run-test-case:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     needs: [changes, get-test-cases, build]
     strategy:
       matrix: ${{ fromJson(needs.get-test-cases.outputs.matrix) }}
@@ -240,19 +240,45 @@ jobs:
         uses: hashicorp/setup-terraform@v1.2.1
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
-      - name: restore cached binaries
+      - name: Restore cached binaries
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'ubuntu-latest' }}
         uses: actions/cache@v2
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
-        if: ${{ needs.changes.outputs.changed == 'true' }}
 
-      - name: copy binary
+      - name: Copy binary
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'ubuntu-latest' }}
         run: cp -R build aws-otel-collector/build
-        if: ${{ needs.changes.outputs.changed == 'true' }}
+
+      - name: Download built artifacts
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'windows-latest' }}
+        uses: actions/download-artifact@v2
+        with:
+          name: binary_artifacts
+          path: build
+
+      - name: Move binary
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'windows-latest' }}
+        run: move build aws-otel-collector/build
 
       - name: Run test
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'ubuntu-latest' }}
         run: | 
           if [[ -f testing-framework/terraform/testcases/${{ matrix.testcase }}/parameters.tfvars ]] ; then opts="-var-file=../testcases/${{ matrix.testcase }}/parameters.tfvars" ; else opts="" ; fi
           cd testing-framework/terraform/mock && terraform init && terraform apply -auto-approve -var="testcase=../testcases/${{ matrix.testcase }}" $opts
-        if: ${{ needs.changes.outputs.changed == 'true' }}
+
+      - name: Run test windows
+        if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'windows-latest' }}
+        run: |
+          if (Test-Path -Path .\testing-framework\terraform/testcases\${{ matrix.testcase }}\parameters.tfvars) {
+            write-host "Write with parameter file"
+            cd .\testing-framework\terraform\mock
+            terraform init
+            terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}" -var-file="..\testcases\${{ matrix.testcase }}\parameters.tfvars"
+          } else {
+            write-host "Write with out parameter file"
+            cd .\testing-framework\terraform\mock
+            terraform init
+            terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}"
+          }
