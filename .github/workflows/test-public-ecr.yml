@@ -163,40 +163,12 @@ jobs:
           key: "cached_packages_${{ github.run_id }}"
           path: build/packages
 
-      - name: Restore cached rpms
-        if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
-        with:
-          key: "cached_rpms_${{ github.run_id }}"
-          path: build/packages
-
-      - name: Restore cached debs
-        if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
-        with:
-          key: "cached_debs_${{ github.run_id }}"
-          path: build/packages
-
       - name: Restore cached image
         if: steps.cached_packages.outputs.cache-hit != 'true'
         uses: actions/cache@v2
         with:
           key: "cached_image_${{ github.run_id }}"
           path: build/packages
-
-      - name: Download built artifacts
-        if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v2
-        with:
-          name: msi_artifacts
-          path: build/packages
-
-      - name: Restore cached ssm
-        if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
-        with:
-          key: "cached_ssm_${{ github.run_id }}"
-          path: build/packages/ssm
 
       - run: ls -R
 
