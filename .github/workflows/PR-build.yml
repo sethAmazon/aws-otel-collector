@@ -270,8 +270,8 @@ jobs:
 
       - name: Run test windows
         if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'windows-latest' }}
-        run: |
-          if (Test-Path -Path .\testing-framework\terraform/testcases\${{ matrix.testcase }}\parameters.tfvars) {
+        run:
+          if (Test-Path -Path .\testing-framework\terraform\testcases\${{ matrix.testcase }}\parameters.tfvars) {
             write-host "Write with parameter file"
             cd .\testing-framework\terraform\mock
             terraform init
