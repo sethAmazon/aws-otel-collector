@@ -273,12 +273,13 @@ jobs:
         run:
           if (Test-Path -Path .\testing-framework\terraform\testcases\${{ matrix.testcase }}\parameters.tfvars) {
             write-host "Write with parameter file"
-            cd .\testing-framework\terraform\mock
-            terraform init
-            terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}" -var-file="..\testcases\${{ matrix.testcase }}\parameters.tfvars"
+            && cd .\testing-framework\terraform\mock
+            && terraform init
+            && write-host "Terraform Init Executed"
+            && terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}" -var-file="..\testcases\${{ matrix.testcase }}\parameters.tfvars"
           } else {
             write-host "Write with out parameter file"
-            cd .\testing-framework\terraform\mock
-            terraform init
-            terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}"
+            && cd .\testing-framework\terraform\mock
+            && terraform init
+            && terraform apply -auto-approve -var="testcase=..\testcases\${{ matrix.testcase }}"
           }
