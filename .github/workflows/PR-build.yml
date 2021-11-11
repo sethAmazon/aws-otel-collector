@@ -271,7 +271,7 @@ jobs:
       - name: Run test windows
         if: ${{ needs.changes.outputs.changed == 'true' && matrix.runner == 'windows-latest' }}
         run: |
-        cd testing-framework/terraform/mock
-        terraform init
-        write-host "Terraform Init Executed"
-        terraform apply -auto-approve -var="testcase=../testcases/${{ matrix.testcase }}" -var-file="../testcases/${{ matrix.testcase }}/parameters.tfvars"
+          cd testing-framework/terraform/mock
+          terraform init
+          write-host "Terraform Init Executed"
+          terraform apply -auto-approve -var="testcase=../testcases/${{ matrix.testcase }}" -var-file="../testcases/${{ matrix.testcase }}/parameters.tfvars"
