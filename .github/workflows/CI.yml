@@ -527,6 +527,8 @@ jobs:
           registry: public.ecr.aws
           username: ${{ secrets.INTEG_TEST_AWS_KEY_ID }}
           password: ${{ secrets.INTEG_TEST_AWS_KEY_SECRET }}
+        env:
+          AWS_REGION: us-east-1
 
       - name: upload to ECR
         if: steps.e2etest-release.outputs.cache-hit != 'true'
