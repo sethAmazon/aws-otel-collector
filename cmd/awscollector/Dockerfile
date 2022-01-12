@@ -16,7 +16,6 @@ RUN echo "Targate platform is $TARGETPLATFORM"
 # always assume binary is created
 COPY build/linux/* /workspace/
 COPY cmd/awscollector/copy_docker_binary.sh  /workspace/cmd/awscollector/copy_docker_binary.sh
-RUN chmod +x cmd/awscollector/copy_docker_binary.sh
 RUN cmd/awscollector/copy_docker_binary.sh
 
 ################################
