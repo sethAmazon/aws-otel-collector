@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out testing framework
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'aws-observability/aws-otel-test-framework'
           path: testing-framework
@@ -55,7 +55,7 @@ jobs:
     outputs:
       canary_matrix: ${{ steps.get-test-cases.outputs.canary_matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup Python
         uses: actions/setup-python@v2.3.1
@@ -73,7 +73,7 @@ jobs:
       matrix: ${{ fromJson(needs.get-canary-test-cases.outputs.canary_matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -94,7 +94,7 @@ jobs:
           terraform_version: 0.14.10
 
       - name: Check out testing framework
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'aws-observability/aws-otel-collector-test-framework'
           path: testing-framework
