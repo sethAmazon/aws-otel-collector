@@ -65,7 +65,7 @@ jobs:
       - name: Build aotutil
         run: cd testing-framework/cmd/aotutil && make build
       - name: Cache aotutil
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "aotutil_${{ github.run_id }}"
           path: testing-framework/cmd/aotutil/aotutil
@@ -114,7 +114,7 @@ jobs:
     #Also speed up unit testing since go test uses the go build cache and also speed up the go build.
     - name: Cache go
       id: cached_go
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       env:
         cache-name: cached_go_modules
       with:
@@ -125,7 +125,7 @@ jobs:
 
     - name: Cache binaries
       id: cached_binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         key: "cached_binaries_${{ github.run_id }}"
         path: build
@@ -230,14 +230,14 @@ jobs:
 
       - name: Cache rpms
         id: cached_rpms
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_rpms_${{ github.run_id }}"
           path: build/packages
 
       - name: restore cached binaries
         if: steps.cached_rpms.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
@@ -291,14 +291,14 @@ jobs:
 
       - name: Cache Debs
         id: cached_debs
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_debs_${{ github.run_id }}"
           path: build/packages
 
       - name: restore cached binaries
         if: steps.cached_debs.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
@@ -346,14 +346,14 @@ jobs:
 
       - name: Cache Image
         id: cached_image
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_image_${{ github.run_id }}"
           path: "${{ env.PACKAGING_ROOT }}"
 
       - name: restore cached binaries
         if: steps.cached_image.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
@@ -377,21 +377,21 @@ jobs:
 
       - name: Cache SSM files
         id: cached_ssm
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_ssm_${{ github.run_id }}"
           path: build/packages/ssm
 
       - name: Restore cached rpms
         if: steps.cached_ssm.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_rpms_${{ github.run_id }}"
           path: build/packages
 
       - name: Restore cached debs
         if: steps.cached_ssm.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_debs_${{ github.run_id }}"
           path: build/packages
@@ -423,28 +423,28 @@ jobs:
 
       - name: Cache the packages
         id: cached_packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_packages_${{ github.run_id }}"
           path: build/packages
 
       - name: Restore cached rpms
         if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_rpms_${{ github.run_id }}"
           path: build/packages
 
       - name: Restore cached debs
         if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_debs_${{ github.run_id }}"
           path: build/packages
 
       - name: Restore cached image
         if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_image_${{ github.run_id }}"
           path: build/packages
@@ -458,7 +458,7 @@ jobs:
 
       - name: Restore cached ssm
         if: steps.cached_packages.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_ssm_${{ github.run_id }}"
           path: build/packages/ssm
@@ -487,7 +487,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-release
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -501,7 +501,7 @@ jobs:
           aws-region: us-west-2
 
       - name: restore cached rpms
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_packages_${{ github.run_id }}"
           path: build/packages
@@ -596,7 +596,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-ec2-1
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -630,7 +630,7 @@ jobs:
 
       - name: Restore aoutil
         if: steps.e2etest-ec2-1.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "aotutil_${{ github.run_id }}"
           path: testing-framework/cmd/aotutil/aotutil
@@ -666,7 +666,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-ec2-2
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -700,7 +700,7 @@ jobs:
 
       - name: Restore aoutil
         if: steps.e2etest-ec2-2.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "aotutil_${{ github.run_id }}"
           path: testing-framework/cmd/aotutil/aotutil
@@ -736,7 +736,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-ec2-3
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -770,7 +770,7 @@ jobs:
 
       - name: Restore aoutil
         if: steps.e2etest-ec2-3.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "aotutil_${{ github.run_id }}"
           path: testing-framework/cmd/aotutil/aotutil
@@ -806,7 +806,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-ecs
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -869,7 +869,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-eks
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -925,7 +925,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-eks-fargate
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -988,7 +988,7 @@ jobs:
 
       - name: Cache if success
         id: e2etest-eks-adot-operator
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             VERSION
@@ -1044,7 +1044,7 @@ jobs:
           aws-region: us-west-2
 
       - name: restore cached packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: build/packages
           key: "cached_packages_${{ github.run_id }}"
@@ -1082,7 +1082,7 @@ jobs:
           aws-region: us-west-2
 
       - name: restore cached packages
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: build/packages
           key: "cached_packages_${{ github.run_id }}"
