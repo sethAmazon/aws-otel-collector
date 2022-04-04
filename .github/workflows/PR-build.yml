@@ -65,7 +65,7 @@ jobs:
       if: ${{ needs.changes.outputs.changed == 'true' }}
 
     - name: Cache Build
-      uses: actions/cache@v2
+      uses: actions/cache@v3.0.1
       with:
         path: |
           ~/go/pkg/mod
@@ -90,7 +90,7 @@ jobs:
       if: ${{ needs.changes.outputs.changed == 'true' }}
 
     - name: Cache binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v3.0.1
       with:
         key: "cached_binaries_${{ github.run_id }}"
         path: build
@@ -135,7 +135,7 @@ jobs:
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: restore cached binaries
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.1
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
@@ -160,7 +160,7 @@ jobs:
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: restore cached binaries
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.1
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
@@ -224,7 +224,7 @@ jobs:
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: restore cached binaries
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.1
         with:
           key: "cached_binaries_${{ github.run_id }}"
           path: build
