@@ -36,7 +36,7 @@ jobs:
       testing_version: ${{ steps.get-testing-version.outputs.testing_version }}
       commit_id: ${{ steps.get-testing-version.outputs.commit_id }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           fetch-depth: 0
       
@@ -82,7 +82,7 @@ jobs:
     outputs:
       perf_matrix: ${{ steps.get-test-cases.outputs.perf_matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         
       - name: Setup Python
         uses: actions/setup-python@v2.3.1
@@ -100,7 +100,7 @@ jobs:
       matrix: ${{ fromJson(needs.get-perf-test-cases.outputs.perf_matrix) }}
       max-parallel: 10
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -119,7 +119,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
       
       - name: Check out testing framework
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
         with:
           repository: 'aws-observability/aws-otel-collector-test-framework'
           path: testing-framework
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [get-testing-version, run-perf-test]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
       
       - name: Setup Python
         uses: actions/setup-python@v2.3.1

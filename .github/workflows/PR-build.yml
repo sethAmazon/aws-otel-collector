@@ -33,7 +33,7 @@ jobs:
     outputs:
       changed: ${{ steps.filter.outputs.changed }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -61,7 +61,7 @@ jobs:
         go-version: 1.17
       if: ${{ needs.changes.outputs.changed == 'true' }}
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.1.0
       if: ${{ needs.changes.outputs.changed == 'true' }}
 
     - name: Cache Build
@@ -108,7 +108,7 @@ jobs:
     runs-on: windows-latest
     needs: [changes, build]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: Download built artifacts
@@ -131,7 +131,7 @@ jobs:
     needs: [changes, build]
     steps:
       # Build and archive RPMs into cache.
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: restore cached binaries
@@ -156,7 +156,7 @@ jobs:
     needs: [changes, build]
     steps:
       # Build and archive debs into cache.
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: restore cached binaries
@@ -178,7 +178,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
 
       - name: Setup Python
         uses: actions/setup-python@v2.3.1
@@ -200,14 +200,14 @@ jobs:
       matrix: ${{ fromJson(needs.get-test-cases.outputs.matrix) }}
     steps:
       - name: Check out testing framework
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
         with:
           repository: 'aws-observability/aws-otel-collector-test-framework'
           path: testing-framework
         if: ${{ needs.changes.outputs.changed == 'true' }}
 
       - name: Check out Collector
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.1.0
         with:
           path: aws-otel-collector
         if: ${{ needs.changes.outputs.changed == 'true' }}
